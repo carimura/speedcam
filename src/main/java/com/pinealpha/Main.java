@@ -22,8 +22,8 @@ public class Main {
 
         Helper.loadNativeOpenCV();
 
-        //faceDetect("/astrid.png", "target/output.png");
-        faceDetectPanama("/astrid.png", "target/output.png");
+        //faceDetect("/chad.png", "target/output.png");
+        faceDetectPanama("/chad.png", "target/output.png");
 
 
         //videoProcess("/output_clean.mp4", "target/output.mp4");
