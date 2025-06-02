@@ -3,10 +3,8 @@ package com.pinealpha;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.core.Mat;
-import org.opencv.core.Core;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
-import org.opencv.videoio.VideoCapture;
 
 import java.io.*;
 
@@ -14,21 +12,17 @@ import java.lang.foreign.*;
 import java.lang.invoke.*;
 
 
-public class Main {
+public class FaceDetect {
 
-    void main(String[] args) throws IOException, Throwable {
-        System.out.println("---- SPEEDCAM STARTING! ----");
+    public static void main(String[] args) throws IOException, Throwable {
+        System.out.println("---- FACE DETECT STARTING! ----");
         //Helper.loadJNIOpenCV();
+        //faceDetect("/chad.png", "target/output.png");
 
         Helper.loadNativeOpenCV();
-
-        //faceDetect("/chad.png", "target/output.png");
         faceDetectPanama("/chad.png", "target/output.png");
 
-
-        //videoProcess("/output_clean.mp4", "target/output.mp4");
-
-        System.out.println("---- PROCESSING COMPLETE! ----");
+        System.out.println("---- FACE DETECT COMPLETE! ----");
     }
 
 
@@ -46,7 +40,7 @@ public class Main {
     }
 
 
-    public void faceDetectPanama(String in, String out) throws IOException, Throwable {
+    public static void faceDetectPanama(String in, String out) throws IOException, Throwable {
         var inImg = Helper.extractResource(in).getAbsolutePath();
         var cascadePath = Helper.extractResource("/haarcascade_frontalface_alt.xml").getAbsolutePath();
 
@@ -69,34 +63,30 @@ public class Main {
         }
     }
 
+    public void testPanama() throws IOException, Throwable {
+        System.out.println("------ Panama ------");
 
-    public void videoProcess(String resource, String outFile) throws IOException {
-        VideoCapture cap = new VideoCapture(Helper.extractResource(resource).getAbsolutePath());
-        if (!cap.isOpened()) {
-            System.out.println("Error: Cannot open video file.");
-            return;
+        Helper.loadNativeOpenCV();
+
+        String imagePath = Helper.extractResource("/astrid.png").getAbsolutePath();
+
+        var linker = Linker.nativeLinker();
+
+        try (Arena arena = Arena.ofConfined()) {
+            SymbolLookup lookup = SymbolLookup.loaderLookup();
+
+            MethodHandle getImageWidth = linker.downcallHandle(
+                lookup.find("get_image_width").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS)
+            );
+
+            MemorySegment utf8Path = arena.allocateFrom(imagePath);
+
+            int width = (int) getImageWidth.invoke(utf8Path);
+            System.out.println("Image width: " + width);
         }
-
-        CascadeClassifier faceDetector = new CascadeClassifier(Helper.extractResource("/haarcascade_frontalface_alt.xml").getAbsolutePath());
-
-        Mat frame = new Mat();
-        int frameCount = 0;
-
-        while (cap.read(frame)) {
-            if (frame.empty()) break;
-            MatOfRect faces = new MatOfRect();
-            faceDetector.detectMultiScale(frame, faces);
-            for (Rect face : faces.toArray()) {
-                Imgproc.rectangle(frame, face.tl(), face.br(), new Scalar(0, 0, 255), 3);
-            }
-            // Optional: Save every nth frame for debugging
-            if (frameCount % 2 == 0) {
-                Imgcodecs.imwrite("target/frame_" + frameCount + ".jpg", frame);
-            }
-            frameCount++;
-        }
-
-        cap.release();
+        System.out.println("------ DONE ------");
     }
+
 
 }
