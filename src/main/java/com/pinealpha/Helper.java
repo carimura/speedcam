@@ -1,15 +1,87 @@
 package com.pinealpha;
 
+import com.pinealpha.objects.*;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.core.MatOfPoint;
 
 public class Helper {
+
+    public static Args parseArgs(String[] args) {
+        Args argsRecord = new Args();
+
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--in" -> {
+                    if (i + 1 < args.length) {
+                        argsRecord.videoPath = args[++i];
+                    } else {
+                        System.err.println("Error: --in requires a video path argument");
+                        argsRecord.printUsage();
+                        System.exit(1);
+                    }
+                }
+                case "--debug" -> argsRecord.debug = true;
+                default -> {
+                    System.err.println("Unknown argument: " + args[i]);
+                    argsRecord.printUsage();
+                    System.exit(1);
+                }
+            }
+        }
+        
+        // Validate required arguments
+        if (argsRecord.videoPath == null) {
+            System.err.println("Error: Video path is required");
+            argsRecord.printUsage();
+            System.exit(1);
+        }
+
+        System.out.println("Processing video: " + argsRecord.videoPath);
+        if (argsRecord.debug) {
+            System.out.println("Debug mode: ENABLED");
+        }
+
+        return argsRecord;
+    }
+
+    public static void writeImageToFile(Mat frame, String filename, List<MatOfPoint> polygons, List<MatOfPoint> largeContours) {
+        Mat frameWithROI = frame.clone();
+
+        if (polygons != null) {
+            Imgproc.polylines(frameWithROI, polygons, true, new Scalar(0, 0, 255), 3);
+        }
+        
+        if (largeContours != null) {
+            Imgproc.drawContours(frameWithROI, largeContours, -1, new Scalar(0, 255, 0), 2);
+        }
+        
+        Imgcodecs.imwrite(filename, frameWithROI);
+        frameWithROI.release();
+    }
+
+    public static void printVideoProperties(VideoInfo video) {
+        System.out.println("Video Properties:");
+        System.out.println("  FPS: " + video.fps());
+        System.out.println("  Resolution: " + video.frameWidth() + "x" + video.frameHeight());
+        System.out.println("  Total Frames: " + video.totalFrames());
+        System.out.println("  Duration: " + String.format("%.2f", video.totalFrames() / video.fps()) + " seconds");
+    }
+
+
     public static File extractResource(String resource) throws IOException {
         try (InputStream in = Helper.class.getResourceAsStream(resource)) {
-            if (in == null) throw new FileNotFoundException(resource);
+            if (in == null) {
+                throw new FileNotFoundException(resource);
+            }
 
             File fileOut = new File(System.getProperty("java.io.tmpdir"), "tempFile" + System.currentTimeMillis());
             fileOut.deleteOnExit();
@@ -24,13 +96,14 @@ public class Helper {
 
     public static void extractLibrary(String resourcePath, Path destination) throws IOException {
         try (InputStream in = Helper.class.getClassLoader().getResourceAsStream(resourcePath)) {
-            if (in == null) throw new FileNotFoundException("Missing resource: " + resourcePath);
+            if (in == null) {
+                throw new FileNotFoundException("Missing resource: " + resourcePath);
+            }
             Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
             destination.toFile().deleteOnExit();
             destination.toFile().setExecutable(true, false);
         }
     }
-
 
     public static void loadNativeOpenCV() throws Throwable {
         List<String> libraries = List.of(
@@ -52,7 +125,6 @@ public class Helper {
         System.setProperty("java.library.path", tempDir.toString());
         System.load(tempDir.resolve("libcvwrapper.dylib").toString());
     }
-
 
     public static void loadJNIOpenCV() throws IOException {
         System.load(extractResource("/native/libopencv_java4120.dylib").getAbsolutePath());
