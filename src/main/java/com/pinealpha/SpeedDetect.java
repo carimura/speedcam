@@ -15,9 +15,9 @@ import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
-//TODO: IGNORE RIGHT-TO-LEFT
-//TODO: MEASURE DISTANCE OF FRAME
+//TODO: DEBUG RIGHT TO LEFT
 //TODO: STORE RESULTS SOMEWHERE
+//TODO: TEST SUITE THAT CHECKS KNOWN VIDEOS AND RESULTS (this viedeo SHOULD BE 23mph, LeftToRight, 319 frames, etc)
 
 public class SpeedDetect {
 
@@ -70,7 +70,7 @@ public class SpeedDetect {
         int frameCount = 0;
         int firstMotionFrame = -1;
         int lastMotionFrame = -1;
-        double maxMotionPercentage = 0;
+        double firstMotionX = -1; // Track X position of first sustained motion
 
         // Track consecutive motion frames
         int consecutiveMotionFrames = 0;
@@ -135,16 +135,28 @@ public class SpeedDetect {
                     significantMotionStart = frameCount - 19; // Mark when it actually started
                     if (firstMotionFrame == -1) {
                         firstMotionFrame = significantMotionStart;
+                        
+                        // Calculate centroid of largest contour to determine initial position
+                        if (!largeContours.isEmpty()) {
+                            MatOfPoint largestContour = largeContours.stream()
+                                .max((c1, c2) -> Double.compare(Imgproc.contourArea(c1), Imgproc.contourArea(c2)))
+                                .orElse(largeContours.get(0));
+                            
+                            // Calculate centroid using moments
+                            var moments = Imgproc.moments(largestContour);
+                            if (moments.m00 != 0) {
+                                firstMotionX = moments.m10 / moments.m00;
+                            } else {
+                                firstMotionX = video.frameWidth() / 2.0; // Default to center if calculation fails
+                            }
+                            largestContour.release();
+                        }
                     }
                 }
             } else {
                 // Reset if no motion detected
                 consecutiveMotionFrames = 0;
                 sustainedMotion = false;
-            }
-
-            if (motionPercentage > maxMotionPercentage && frameCount > 5) {
-                maxMotionPercentage = motionPercentage;
             }
 
             if (debug) {Helper.writeImageToFile(frame, "target/frame_" + frameCount + ".jpg", polygons, null);}
@@ -188,8 +200,9 @@ public class SpeedDetect {
                 frameCount,
                 firstMotionFrame,
                 lastMotionFrame,
-                maxMotionPercentage,
-                video.fps()
+                video.fps(),
+                firstMotionX,
+                video.frameWidth()
         );
     }
 
