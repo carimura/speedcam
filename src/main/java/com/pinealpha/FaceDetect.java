@@ -1,5 +1,7 @@
 package com.pinealpha;
 
+import com.pinealpha.util.Helper;
+
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.core.Mat;

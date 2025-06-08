@@ -1,4 +1,4 @@
-package com.pinealpha;
+package com.pinealpha.util;
 
 import com.pinealpha.objects.*;
 

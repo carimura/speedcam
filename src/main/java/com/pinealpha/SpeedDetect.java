@@ -1,6 +1,8 @@
 package com.pinealpha;
 
 import com.pinealpha.objects.*;
+import com.pinealpha.util.Helper;
+import com.pinealpha.util.DatabaseManager;
 
 import java.io.*;
 import java.util.*;
@@ -15,21 +17,19 @@ import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
-//TODO: DEBUG RIGHT TO LEFT
-//TODO: STORE RESULTS SOMEWHERE
-//TODO: TEST SUITE THAT CHECKS KNOWN VIDEOS AND RESULTS (this viedeo SHOULD BE 23mph, LeftToRight, 319 frames, etc)
-
 public class SpeedDetect {
 
     public static void main(String[] args) throws IOException, Throwable {
         System.out.println("---- SPEEDCAM STARTING! ----");
 
         Helper.loadJNIOpenCV();
+        DatabaseManager.createTablesIfNotExists();
 
         Args argsRecord = Helper.parseArgs(args);
-
         MotionResult result = getCarSpeedFromVideo(argsRecord.videoPath, argsRecord.debug);
         result.printMotionResults();
+        DatabaseManager.insertMotionResult(result, argsRecord.videoPath);
+        
         System.out.println("---- SPEEDCAM COMPLETE! ----");
     }
     
@@ -197,12 +197,11 @@ public class SpeedDetect {
         cap.release();
 
         return new MotionResult(
+                video,
                 frameCount,
                 firstMotionFrame,
                 lastMotionFrame,
-                video.fps(),
-                firstMotionX,
-                video.frameWidth()
+                firstMotionX
         );
     }
 

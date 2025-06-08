@@ -1,16 +1,14 @@
 package com.pinealpha.objects;
 
 public record MotionResult(
+    VideoInfo video,
     int totalFramesProcessed,
     int firstMotionFrame,
     int lastMotionFrame,
-    double fps,  // Store fps for time calculations
-    double firstMotionX,  // X position where motion first appeared
-    int frameWidth        // Frame width to calculate direction
+    double firstMotionX
 ) {
     private static final double FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT = 155.0;
     private static final double FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT = 165.0;
-    private static final double FPS_TO_MPH = 0.681818; // (3600 sec/hr) / (5280 ft/mile)
     
     public boolean hasMotion() {
         return firstMotionFrame != -1;
@@ -20,16 +18,15 @@ public record MotionResult(
         if (!hasMotion()) {
             return "Unknown";
         }
-        // If motion starts on left half, it's going left to right
-        return firstMotionX < frameWidth / 2.0 ? "LeftToRight" : "RightToLeft";
+        return firstMotionX < video.frameWidth() / 2.0 ? "LeftToRight" : "RightToLeft";
     }
     
     public double getFirstMotionTime() {
-        return hasMotion() ? firstMotionFrame / fps : -1;
+        return hasMotion() ? firstMotionFrame / video.fps() : -1;
     }
     
     public double getLastMotionTime() {
-        return hasMotion() ? lastMotionFrame / fps : -1;
+        return hasMotion() ? lastMotionFrame / video.fps() : -1;
     }
     
     public int getMotionDurationFrames() {
@@ -37,7 +34,7 @@ public record MotionResult(
     }
     
     public double getMotionDurationSeconds() {
-        return hasMotion() ? getMotionDurationFrames() / fps : 0;
+        return hasMotion() ? getMotionDurationFrames() / video.fps() : 0;
     }
     
     public double getSpeedFeetPerSecond() {
@@ -51,7 +48,8 @@ public record MotionResult(
     }
     
     public double getSpeedMph() {
-        return getSpeedFeetPerSecond() * FPS_TO_MPH;
+        var fps_to_mph = 0.681818;
+        return getSpeedFeetPerSecond() * fps_to_mph;
     }
 
     public void printMotionResults() {
@@ -60,7 +58,7 @@ public record MotionResult(
                 Last motion at frame: %d (time: %.2fs)
                 Motion Duration: %d frames (%.2f seconds)
                 Direction: %s
-                Calculated speed: %.1f mph (%.1f ft/s)
+                Calculated speed: %.1f mph
               """.formatted(
                 firstMotionFrame,
                 getFirstMotionTime(),
@@ -69,8 +67,7 @@ public record MotionResult(
                 getMotionDurationFrames(),
                 getMotionDurationSeconds(),
                 getDirection(),
-                getSpeedMph(),
-                getSpeedFeetPerSecond()
+                getSpeedMph()
             ) : "  No significant motion detected";
 
         double fieldOfViewDistance = hasMotion() && getDirection().equals("LeftToRight") 

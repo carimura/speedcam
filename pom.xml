@@ -22,6 +22,13 @@
             <version>4.12.0-custom</version>
         </dependency>
 
+        <!-- PostgreSQL JDBC Driver for Supabase connection -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -37,7 +44,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.0</version>
+                    <version>3.13.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-jar-plugin</artifactId>
@@ -55,7 +62,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <version>3.13.0</version>
                         <configuration>
                             <release>${maven.compiler.source}</release>
                             <compilerArgs>--enable-preview</compilerArgs>
