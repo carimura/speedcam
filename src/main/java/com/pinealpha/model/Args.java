@@ -1,4 +1,4 @@
-package com.pinealpha.objects;
+package com.pinealpha.model;
 
 public record Args(String videoPath, boolean debug) {
     

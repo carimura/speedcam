@@ -1,6 +1,6 @@
 package com.pinealpha;
 
-import com.pinealpha.objects.*;
+import com.pinealpha.model.*;
 import com.pinealpha.util.Helper;
 import com.pinealpha.util.DatabaseManager;
 

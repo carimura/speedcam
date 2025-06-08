@@ -1,6 +1,6 @@
 package com.pinealpha.util;
 
-import com.pinealpha.objects.*;
+import com.pinealpha.model.*;
 
 import java.io.*;
 import java.nio.file.Files;

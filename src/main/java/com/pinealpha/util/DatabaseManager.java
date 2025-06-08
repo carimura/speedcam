@@ -1,6 +1,6 @@
 package com.pinealpha.util;
 
-import com.pinealpha.objects.MotionResult;
+import com.pinealpha.model.MotionResult;
 import java.sql.*;
 
 public class DatabaseManager {
