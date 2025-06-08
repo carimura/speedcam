@@ -16,41 +16,46 @@ import org.opencv.core.MatOfPoint;
 public class Helper {
 
     public static Args parseArgs(String[] args) {
-        Args argsRecord = new Args();
+        String videoPath = null;
+        boolean debug = false;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--in" -> {
                     if (i + 1 < args.length) {
-                        argsRecord.videoPath = args[++i];
+                        videoPath = args[++i];
                     } else {
                         System.err.println("Error: --in requires a video path argument");
-                        argsRecord.printUsage();
+                        Args.printUsage();
                         System.exit(1);
                     }
                 }
-                case "--debug" -> argsRecord.debug = true;
+                case "--debug" -> debug = true;
+                case "--help", "-h" -> {
+                    Args.printUsage();
+                    System.exit(0);
+                }
                 default -> {
                     System.err.println("Unknown argument: " + args[i]);
-                    argsRecord.printUsage();
+                    Args.printUsage();
                     System.exit(1);
                 }
             }
         }
         
         // Validate required arguments
-        if (argsRecord.videoPath == null) {
+        if (videoPath == null) {
             System.err.println("Error: Video path is required");
-            argsRecord.printUsage();
+            Args.printUsage();
             System.exit(1);
         }
 
-        System.out.println("Processing video: " + argsRecord.videoPath);
-        if (argsRecord.debug) {
+        System.out.println("Processing video: " + videoPath);
+        if (debug) {
             System.out.println("Debug mode: ENABLED");
         }
 
-        return argsRecord;
+        return new Args(videoPath, debug);
     }
 
     public static void writeImageToFile(Mat frame, String filename, List<MatOfPoint> polygons, List<MatOfPoint> largeContours) {

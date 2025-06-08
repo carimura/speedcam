@@ -26,9 +26,10 @@ public class SpeedDetect {
         DatabaseManager.createTablesIfNotExists();
 
         Args argsRecord = Helper.parseArgs(args);
-        MotionResult result = getCarSpeedFromVideo(argsRecord.videoPath, argsRecord.debug);
+
+        MotionResult result = getCarSpeedFromVideo(argsRecord.videoPath(), argsRecord.debug());
         result.printMotionResults();
-        DatabaseManager.insertMotionResult(result, argsRecord.videoPath);
+        DatabaseManager.insertMotionResult(result, argsRecord.videoPath());
         
         System.out.println("---- SPEEDCAM COMPLETE! ----");
     }

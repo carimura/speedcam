@@ -1,10 +1,8 @@
 package com.pinealpha.objects;
 
-public class Args {
-    public String videoPath;
-    public boolean debug;
-
-    public void printUsage() {
+public record Args(String videoPath, boolean debug) {
+    
+    public static void printUsage() {
         System.out.println("\nUsage: java -jar speedcam.jar --in <video_path> [--debug]");
         System.out.println("\nRequired arguments:");
         System.out.println("  --in <path>   Path to the video file to analyze");
