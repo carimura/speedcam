@@ -28,15 +28,38 @@ public class SpeedDetect {
 
         Args argsRecord = Helper.parseArgs(args);
 
-        MotionResult result = getCarSpeedFromVideo(argsRecord.videoPath(), argsRecord.debug());
-        result.printMotionResults();
-        DatabaseManager.insertMotionResult(result, argsRecord.videoPath());
+        // Get list of videos to process (either single video or all videos in directory)
+        List<String> videoPaths = Helper.getVideoPaths(argsRecord.videoPath());
+        
+        int processed = 0;
+        int errors = 0;
+        
+        for (String videoPath : videoPaths) {
+            System.out.println("\n=== Processing: " + videoPath + " ===");
+            try {
+                MotionResult result = getCarSpeedFromVideo(videoPath, argsRecord.debug());
+                result.printMotionResults();
+                DatabaseManager.insertMotionResult(result, videoPath);
+                processed++;
+            } catch (Exception e) {
+                System.err.println("Error processing " + videoPath + ": " + e.getMessage());
+                e.printStackTrace();
+                errors++;
+            }
+        }
+        
+        if (videoPaths.size() > 1) {
+            System.out.println("\n=== SUMMARY ===");
+            System.out.println("Total videos: " + videoPaths.size());
+            System.out.println("Successfully processed: " + processed);
+            System.out.println("Errors: " + errors);
+        }
         
         System.out.println("---- SPEEDCAM COMPLETE! ----");
     }
     
     public static MotionResult getCarSpeedFromVideo(String videoPath, boolean debug) throws IOException {
-        VideoCapture cap = new VideoCapture(Helper.extractResource(videoPath).getAbsolutePath());
+        VideoCapture cap = new VideoCapture(videoPath);
 
         VideoInfo video = new VideoInfo(
                 cap.get(Videoio.CAP_PROP_FPS),
@@ -48,10 +71,10 @@ public class SpeedDetect {
 
         // bottom left, bottom right, top right, top left
         List<Point> roadPoints = Arrays.asList(
-                new Point(45, 1060),
+                new Point(0, 1060),
                 new Point(video.frameWidth(), 1935),
                 new Point(video.frameWidth(), 800),
-                new Point(42, 860)
+                new Point(0, 860)
         );
 
         MatOfPoint roadPolygon = new MatOfPoint();
