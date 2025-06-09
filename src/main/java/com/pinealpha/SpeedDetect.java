@@ -28,36 +28,21 @@ public class SpeedDetect {
 
         Args argsRecord = Helper.parseArgs(args);
 
-        // Get list of videos to process (either single video or all videos in directory)
         List<String> videoPaths = Helper.getVideoPaths(argsRecord.videoPath());
-        
+
         int processed = 0;
-        int errors = 0;
-        
+
         for (String videoPath : videoPaths) {
-            System.out.println("\n=== Processing: " + videoPath + " ===");
-            try {
-                MotionResult result = getCarSpeedFromVideo(videoPath, argsRecord.debug());
-                result.printMotionResults();
-                DatabaseManager.insertMotionResult(result, videoPath);
-                processed++;
-            } catch (Exception e) {
-                System.err.println("Error processing " + videoPath + ": " + e.getMessage());
-                e.printStackTrace();
-                errors++;
-            }
+            System.out.println("\nProcessing: " + videoPath);
+            MotionResult result = getCarSpeedFromVideo(videoPath, argsRecord.debug());
+            result.printMotionResults();
+            DatabaseManager.insertMotionResult(result, videoPath);
+            processed++;
         }
-        
-        if (videoPaths.size() > 1) {
-            System.out.println("\n=== SUMMARY ===");
-            System.out.println("Total videos: " + videoPaths.size());
-            System.out.println("Successfully processed: " + processed);
-            System.out.println("Errors: " + errors);
-        }
-        
+
         System.out.println("---- SPEEDCAM COMPLETE! ----");
     }
-    
+
     public static MotionResult getCarSpeedFromVideo(String videoPath, boolean debug) throws IOException {
         VideoCapture cap = new VideoCapture(videoPath);
 
@@ -90,7 +75,7 @@ public class SpeedDetect {
         bgSubtractor.setVarThreshold(16); // Lower threshold = more sensitive (default is 16)
 
         Mat frame = new Mat();
-        Mat fgMask = new Mat(); 
+        Mat fgMask = new Mat();
         Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2));
 
         int frameCount = 0;
@@ -101,7 +86,19 @@ public class SpeedDetect {
         // Track consecutive motion frames
         int consecutiveMotionFrames = 0;
         boolean sustainedMotion = false;
-        int significantMotionStart;
+        int consecutiveNoMotionFrames = 0;
+        boolean carHasPassed = false; // Once a car has passed, don't track new motion
+
+        // Direction detection variables
+        boolean directionDetected = false;
+        boolean isLeftToRight = true; // default assumption
+
+        // Direction-specific parameters
+        double motionThreshold = 0.01;
+        double areaThreshold = 2000;
+        int consecutiveFramesRequired = 20;
+        double endMotionThreshold = 0.005; // For detecting when motion ends
+        int noMotionFramesBeforeStop = 10; // Consecutive frames with no motion to stop tracking
 
         while (cap.read(frame)) {
             if (frame.empty()) {
@@ -116,11 +113,8 @@ public class SpeedDetect {
             org.opencv.core.Core.bitwise_and(fgMask, roiMask, maskedFgMask);
 
             // Remove noise with morphological operations
-            // Use Imgproc.MORPH_CLOSE to connect nearby regions instead of opening
+            // Use MORPH_CLOSE to connect nearby regions
             Imgproc.morphologyEx(maskedFgMask, maskedFgMask, Imgproc.MORPH_CLOSE, kernel);
-            
-            // Additional dilation to expand detected regions and connect fragmented parts
-            //Imgproc.dilate(maskedFgMask, maskedFgMask, dilateKernel);
 
             // Find contours of moving objects in masked area
             List<MatOfPoint> contours = new ArrayList<>();
@@ -136,7 +130,7 @@ public class SpeedDetect {
                 double area = Imgproc.contourArea(contour);
 
                 // Lower threshold for more sensitivity (was 5000, then 1000, then 500)
-                if (area > 2000) {
+                if (area > areaThreshold) {
                     significantContours++;
                     totalMotionArea += area;
                     largeContours.add(contour);
@@ -153,25 +147,25 @@ public class SpeedDetect {
             double motionPercentage = (totalMotionArea * 100.0) / (video.frameWidth() * video.frameHeight());
 
             // Basic motion detection (any reasonable motion)
-            boolean hasMotion = frameCount > 5 && motionPercentage > 0.01 && largestContourArea > 2000;
+            boolean hasMotion = frameCount > 5 && motionPercentage > motionThreshold && largestContourArea > areaThreshold;
 
             // Track consecutive motion frames
             if (hasMotion) {
-                //if (debug) {Helper.writeImageToFile(frame, "target/motion_" + frameCount + (sustainedMotion ? "_sustained" : "") + ".jpg", polygons, largeContours);}
                 consecutiveMotionFrames++;
-                if (consecutiveMotionFrames >= 20 && !sustainedMotion) {
+                consecutiveNoMotionFrames = 0; // Reset no motion counter
+                if (consecutiveMotionFrames >= consecutiveFramesRequired && !sustainedMotion && !carHasPassed) {
                     // We've found significant sustained motion (likely a car)
+                    // Only track if no car has passed yet
                     sustainedMotion = true;
-                    significantMotionStart = frameCount - 19; // Mark when it actually started
                     if (firstMotionFrame == -1) {
-                        firstMotionFrame = significantMotionStart;
-                        
+                        firstMotionFrame = frameCount - (consecutiveFramesRequired - 1); // Mark when it actually started
+
                         // Calculate centroid of largest contour to determine initial position
                         if (!largeContours.isEmpty()) {
                             MatOfPoint largestContour = largeContours.stream()
-                                .max((c1, c2) -> Double.compare(Imgproc.contourArea(c1), Imgproc.contourArea(c2)))
-                                .orElse(largeContours.get(0));
-                            
+                                    .max((c1, c2) -> Double.compare(Imgproc.contourArea(c1), Imgproc.contourArea(c2)))
+                                    .orElse(largeContours.get(0));
+
                             // Calculate centroid using moments
                             var moments = Imgproc.moments(largestContour);
                             if (moments.m00 != 0) {
@@ -180,35 +174,63 @@ public class SpeedDetect {
                                 firstMotionX = video.frameWidth() / 2.0; // Default to center if calculation fails
                             }
                             largestContour.release();
+
+                            // Detect direction based on starting position
+                            if (!directionDetected) {
+                                isLeftToRight = firstMotionX < video.frameWidth() / 2.0;
+                                directionDetected = true;
+                                System.out.println("Detected direction: " + (isLeftToRight ? "Left-to-Right" : "Right-to-Left"));
+
+                                // Adjust parameters based on direction
+                                if (isLeftToRight) {
+                                    // Left-to-right parameters
+                                    consecutiveFramesRequired = 8; // Less strict for earlier detection
+                                    motionThreshold = 0.007; // More sensitive for left-to-right
+                                    areaThreshold = 1500; // Lower threshold for smaller cars far away
+                                } else {
+                                    // Right-to-left seems to need more stringent end detection
+                                    endMotionThreshold = 0.015; // Balanced threshold for ending
+                                    areaThreshold = 2500;
+                                    noMotionFramesBeforeStop = 8; // Give more time before stopping
+                                    motionThreshold = 0.01; // Standard threshold
+                                }
+                            }
                         }
                     }
                 }
             } else {
                 // Reset if no motion detected
                 consecutiveMotionFrames = 0;
-                sustainedMotion = false;
+                consecutiveNoMotionFrames++;
+
+                if (sustainedMotion) {
+                    // Stop if motion is very low OR we've had no motion for several frames
+                    if (motionPercentage < endMotionThreshold || consecutiveNoMotionFrames >= noMotionFramesBeforeStop) {
+                        sustainedMotion = false;
+                        carHasPassed = true;
+                    }
+                }
             }
 
-            //if (debug) {Helper.writeImageToFile(frame, "target/frame_" + frameCount + ".jpg", polygons, null);}
             if (debug) {
                 Helper.writeImageToFile(frame, "target/frame_" + frameCount + (sustainedMotion ? "_sustained" : "") + ".jpg", polygons, largeContours);
-                
+
                 // Also save the motion mask to see what the detector sees
                 if (hasMotion || sustainedMotion) {
                     Imgcodecs.imwrite("target/mask_" + frameCount + ".jpg", maskedFgMask);
                 }
             }
-            
-            if (sustainedMotion) {
+
+            if (sustainedMotion && hasMotion) {
                 lastMotionFrame = frameCount;
             }
 
             if (debug) {
                 System.out.println("Frame " + frameCount
-                        + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d",
-                                motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames));
+                        + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d, sustained=%s",
+                                motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames, sustainedMotion));
             } else {
-                if (frameCount % 25 == 0) { 
+                if (frameCount % 25 == 0) {
                     System.out.println("Frame " + frameCount
                             + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d",
                                     motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames));
@@ -230,7 +252,6 @@ public class SpeedDetect {
         frame.release();
         fgMask.release();
         kernel.release();
-        //dilateKernel.release();
         roiMask.release();
         roadPolygon.release();
         cap.release();
