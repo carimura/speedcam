@@ -5,20 +5,21 @@ public record MotionResult(
     int totalFramesProcessed,
     int firstMotionFrame,
     int lastMotionFrame,
-    double firstMotionX
+    double firstMotionX,
+    boolean isRejected
 ) {
     private static final double FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT = 155.0;
     private static final double FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT = 165.0;
     
     public boolean hasMotion() {
-        return firstMotionFrame != -1;
+        return firstMotionFrame != -1 && !isRejected;
     }
     
-    public String getDirection() {
+    public Direction getDirection() {
         if (!hasMotion()) {
-            return "Unknown";
+            return Direction.Unknown;
         }
-        return firstMotionX < video.frameWidth() / 2.0 ? "LeftToRight" : "RightToLeft";
+        return firstMotionX < video.frameWidth() / 2.0 ? Direction.LeftToRight : Direction.RightToLeft;
     }
     
     public double getFirstMotionTime() {
@@ -41,7 +42,7 @@ public record MotionResult(
         if (!hasMotion() || getMotionDurationSeconds() == 0) {
             return 0;
         }
-        double distance = getDirection().equals("LeftToRight") 
+        double distance = getDirection() == Direction.LeftToRight
             ? FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT 
             : FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT;
         return distance / getMotionDurationSeconds();
@@ -66,11 +67,11 @@ public record MotionResult(
                 getLastMotionTime(),
                 getMotionDurationFrames(),
                 getMotionDurationSeconds(),
-                getDirection(),
+                getDirection().toString(),
                 getSpeedMph()
-            ) : "  No significant motion detected";
+            ) : isRejected ? "  Video rejected due to noise" : "  No significant motion detected";
 
-        double fieldOfViewDistance = hasMotion() && getDirection().equals("LeftToRight") 
+        double fieldOfViewDistance = hasMotion() && getDirection() == Direction.LeftToRight
             ? FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT 
             : FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT;
 

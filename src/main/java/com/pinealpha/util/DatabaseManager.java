@@ -72,7 +72,7 @@ public class DatabaseManager {
             pstmt.setInt(4, result.lastMotionFrame());
             pstmt.setDouble(5, result.firstMotionX());
             pstmt.setBoolean(6, result.hasMotion());
-            pstmt.setString(7, result.getDirection());
+            pstmt.setString(7, result.getDirection().toString());
             pstmt.setDouble(8, result.getFirstMotionTime());
             pstmt.setDouble(9, result.getLastMotionTime());
             pstmt.setInt(10, result.getMotionDurationFrames());

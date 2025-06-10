@@ -26,21 +26,25 @@ public class SpeedDetect {
         Helper.loadJNIOpenCV();
         DatabaseManager.createTablesIfNotExists();
 
-        Args argsRecord = Helper.parseArgs(args);
-
-        List<String> videoPaths = Helper.getVideoPaths(argsRecord.videoPath());
-
-        int processed = 0;
-
-        for (String videoPath : videoPaths) {
-            System.out.println("\nProcessing: " + videoPath);
-            MotionResult result = getCarSpeedFromVideo(videoPath, argsRecord.debug());
-            result.printMotionResults();
-            DatabaseManager.insertMotionResult(result, videoPath);
-            processed++;
-        }
+        processVideos(Helper.parseArgs(args));
 
         System.out.println("---- SPEEDCAM COMPLETE! ----");
+    }
+
+    public static Map<String, MotionResult> processVideos(Args args) throws IOException {
+        List<String> videoPaths = Helper.getVideoPaths(args.videoPath());
+        Map<String, MotionResult> results = new LinkedHashMap<>();
+        int processed = 0;
+
+        for (String path : videoPaths) {
+            System.out.println("\nProcessing: " + path);
+            MotionResult result = getCarSpeedFromVideo(path, args.debug());
+            result.printMotionResults();
+            DatabaseManager.insertMotionResult(result, path);
+            results.put(path, result);
+            processed++;
+        }
+        return results;
     }
 
     public static MotionResult getCarSpeedFromVideo(String videoPath, boolean debug) throws IOException {
@@ -81,22 +85,22 @@ public class SpeedDetect {
         int frameCount = 0;
         int firstMotionFrame = -1;
         int lastMotionFrame = -1;
-        double firstMotionX = -1; // Track X position of first sustained motion
+        double firstMotionX = -1;
 
         // Track consecutive motion frames
         int consecutiveMotionFrames = 0;
         boolean sustainedMotion = false;
         int consecutiveNoMotionFrames = 0;
-        boolean carHasPassed = false; // Once a car has passed, don't track new motion
+        boolean carHasPassed = false;
 
         // Direction detection variables
         boolean directionDetected = false;
-        boolean isLeftToRight = true; // default assumption
+        boolean isLeftToRight;
 
         // Direction-specific parameters
         double motionThreshold = 0.01;
         double areaThreshold = 2000;
-        int consecutiveFramesRequired = 30; // Higher to avoid false starts in problematic videos
+        int consecutiveFramesRequired = 20;
         double endMotionThreshold = 0.005; // For detecting when motion ends
         int noMotionFramesBeforeStop = 10; // Consecutive frames with no motion to stop tracking
 
@@ -141,30 +145,23 @@ public class SpeedDetect {
                 }
             }
 
-            // Find the largest contour area
             double largestContourArea = largeContours.stream()
                     .mapToDouble(c -> Imgproc.contourArea(c))
                     .max()
                     .orElse(0);
 
-            // Calculate motion percentage based on total image area
             double motionPercentage = (totalMotionArea * 100.0) / (video.frameWidth() * video.frameHeight());
-
-            // Basic motion detection (any reasonable motion)
             boolean hasMotion = frameCount > 5 && motionPercentage > motionThreshold && largestContourArea > areaThreshold;
 
-            // Track consecutive motion frames
             if (hasMotion) {
-                // Track early motion for noise detection
                 if (frameCount < EARLY_FRAME_CUTOFF) {
                     earlyMotionFrames++;
                 }
                 
                 consecutiveMotionFrames++;
-                consecutiveNoMotionFrames = 0; // Reset no motion counter
+                consecutiveNoMotionFrames = 0;
                 if (consecutiveMotionFrames >= consecutiveFramesRequired && !sustainedMotion && !carHasPassed) {
                     // We've found significant sustained motion (likely a car)
-                    // Only track if no car has passed yet
                     sustainedMotion = true;
                     if (firstMotionFrame == -1) {
                         firstMotionFrame = frameCount - (consecutiveFramesRequired - 1); // Mark when it actually started
@@ -190,18 +187,16 @@ public class SpeedDetect {
                                 directionDetected = true;
                                 System.out.println("Detected direction: " + (isLeftToRight ? "Left-to-Right" : "Right-to-Left"));
 
-                                // Adjust parameters based on direction
                                 if (isLeftToRight) {
-                                    // Left-to-right parameters
+                                    motionThreshold = 0.006;
+                                    areaThreshold = 1200;
                                     consecutiveFramesRequired = 8; // Even lower for earlier detection
-                                    motionThreshold = 0.006; // More sensitive for left-to-right
-                                    areaThreshold = 1200; // Lower threshold for smaller cars far away
                                 } else {
                                     // Right-to-left: car gets very small as it moves away
-                                    endMotionThreshold = 0.002; // Even lower threshold for tiny distant cars
+                                    motionThreshold = 0.004;
                                     areaThreshold = 800; // Lower to catch small distant cars
+                                    endMotionThreshold = 0.002; // Even lower threshold for tiny distant cars
                                     noMotionFramesBeforeStop = 25; // Much more tolerance for intermittent detection
-                                    motionThreshold = 0.004; // Very sensitive for small motion
                                 }
                             }
                         }
@@ -252,7 +247,7 @@ public class SpeedDetect {
                 if (earlyMotionRatio > NOISE_THRESHOLD) {
                     System.out.println(String.format("Video rejected due to excessive noise: %.1f%% of early frames had motion (threshold: %.1f%%)", 
                         earlyMotionRatio * 100, NOISE_THRESHOLD * 100));
-                    return new MotionResult(video, frameCount, -1, -1, -1);
+                    return new MotionResult(video, frameCount, -1, -1, -1, true);
                 }
                 if (debug) {
                     System.out.println(String.format("Early motion check passed: %.1f%% of frames had motion", earlyMotionRatio * 100));
@@ -283,7 +278,8 @@ public class SpeedDetect {
                 frameCount,
                 firstMotionFrame,
                 lastMotionFrame,
-                firstMotionX
+                firstMotionX,
+                false
         );
     }
 
