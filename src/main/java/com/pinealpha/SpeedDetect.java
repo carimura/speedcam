@@ -96,7 +96,7 @@ public class SpeedDetect {
         // Direction-specific parameters
         double motionThreshold = 0.01;
         double areaThreshold = 2000;
-        int consecutiveFramesRequired = 20;
+        int consecutiveFramesRequired = 50;
         double endMotionThreshold = 0.005; // For detecting when motion ends
         int noMotionFramesBeforeStop = 10; // Consecutive frames with no motion to stop tracking
 
@@ -184,15 +184,15 @@ public class SpeedDetect {
                                 // Adjust parameters based on direction
                                 if (isLeftToRight) {
                                     // Left-to-right parameters
-                                    consecutiveFramesRequired = 8; // Less strict for earlier detection
+                                    consecutiveFramesRequired = 15; // Keep reasonable for left-to-right
                                     motionThreshold = 0.007; // More sensitive for left-to-right
                                     areaThreshold = 1500; // Lower threshold for smaller cars far away
                                 } else {
-                                    // Right-to-left seems to need more stringent end detection
-                                    endMotionThreshold = 0.015; // Balanced threshold for ending
-                                    areaThreshold = 2500;
-                                    noMotionFramesBeforeStop = 8; // Give more time before stopping
-                                    motionThreshold = 0.01; // Standard threshold
+                                    // Right-to-left: car gets very small as it moves away
+                                    endMotionThreshold = 0.003; // Much lower threshold for tiny distant cars
+                                    areaThreshold = 1000; // Much lower to catch small distant cars
+                                    noMotionFramesBeforeStop = 12; // More tolerance for intermittent detection
+                                    motionThreshold = 0.005; // More sensitive for small motion
                                 }
                             }
                         }
