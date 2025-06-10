@@ -96,9 +96,14 @@ public class SpeedDetect {
         // Direction-specific parameters
         double motionThreshold = 0.01;
         double areaThreshold = 2000;
-        int consecutiveFramesRequired = 50;
+        int consecutiveFramesRequired = 30; // Higher to avoid false starts in problematic videos
         double endMotionThreshold = 0.005; // For detecting when motion ends
         int noMotionFramesBeforeStop = 10; // Consecutive frames with no motion to stop tracking
+
+        // Noise detection variables
+        int earlyMotionFrames = 0;
+        final int EARLY_FRAME_CUTOFF = 80;
+        final double NOISE_THRESHOLD = 0.55; // 55% motion in early frames = too noisy
 
         while (cap.read(frame)) {
             if (frame.empty()) {
@@ -129,7 +134,6 @@ public class SpeedDetect {
             for (MatOfPoint contour : contours) {
                 double area = Imgproc.contourArea(contour);
 
-                // Lower threshold for more sensitivity (was 5000, then 1000, then 500)
                 if (area > areaThreshold) {
                     significantContours++;
                     totalMotionArea += area;
@@ -151,6 +155,11 @@ public class SpeedDetect {
 
             // Track consecutive motion frames
             if (hasMotion) {
+                // Track early motion for noise detection
+                if (frameCount < EARLY_FRAME_CUTOFF) {
+                    earlyMotionFrames++;
+                }
+                
                 consecutiveMotionFrames++;
                 consecutiveNoMotionFrames = 0; // Reset no motion counter
                 if (consecutiveMotionFrames >= consecutiveFramesRequired && !sustainedMotion && !carHasPassed) {
@@ -184,15 +193,15 @@ public class SpeedDetect {
                                 // Adjust parameters based on direction
                                 if (isLeftToRight) {
                                     // Left-to-right parameters
-                                    consecutiveFramesRequired = 15; // Keep reasonable for left-to-right
-                                    motionThreshold = 0.007; // More sensitive for left-to-right
-                                    areaThreshold = 1500; // Lower threshold for smaller cars far away
+                                    consecutiveFramesRequired = 8; // Even lower for earlier detection
+                                    motionThreshold = 0.006; // More sensitive for left-to-right
+                                    areaThreshold = 1200; // Lower threshold for smaller cars far away
                                 } else {
                                     // Right-to-left: car gets very small as it moves away
-                                    endMotionThreshold = 0.003; // Much lower threshold for tiny distant cars
-                                    areaThreshold = 1000; // Much lower to catch small distant cars
-                                    noMotionFramesBeforeStop = 12; // More tolerance for intermittent detection
-                                    motionThreshold = 0.005; // More sensitive for small motion
+                                    endMotionThreshold = 0.002; // Even lower threshold for tiny distant cars
+                                    areaThreshold = 800; // Lower to catch small distant cars
+                                    noMotionFramesBeforeStop = 25; // Much more tolerance for intermittent detection
+                                    motionThreshold = 0.004; // Very sensitive for small motion
                                 }
                             }
                         }
@@ -237,6 +246,19 @@ public class SpeedDetect {
                 }
             }
 
+            // Check for excessive noise after early frames
+            if (frameCount == EARLY_FRAME_CUTOFF) {
+                double earlyMotionRatio = (double) earlyMotionFrames / EARLY_FRAME_CUTOFF;
+                if (earlyMotionRatio > NOISE_THRESHOLD) {
+                    System.out.println(String.format("Video rejected due to excessive noise: %.1f%% of early frames had motion (threshold: %.1f%%)", 
+                        earlyMotionRatio * 100, NOISE_THRESHOLD * 100));
+                    return new MotionResult(video, frameCount, -1, -1, -1);
+                }
+                if (debug) {
+                    System.out.println(String.format("Early motion check passed: %.1f%% of frames had motion", earlyMotionRatio * 100));
+                }
+            }
+            
             frameCount++;
 
             maskedFgMask.release();
