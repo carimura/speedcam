@@ -6,6 +6,7 @@ import java.sql.*;
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:postgresql://aws-0-us-west-1.pooler.supabase.com:6543/postgres";
     private static final String DB_USER = "postgres.trqkabskuqrnvholggoy";
+    private static final String DB_NAME = "motion_results_prod";
     private static final String DB_PASSWORD = System.getenv("SUPABASE_PG_SPEEDCAM_PROD");
     
     static {
@@ -23,70 +24,62 @@ public class DatabaseManager {
         return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
     }
     
-    public static void createTablesIfNotExists() {
-        String createTableSQL = """
-            CREATE TABLE IF NOT EXISTS motion_results (
+    private static String getTableName(String... tableName) {
+        return (tableName.length > 0 && tableName[0] != null) ? tableName[0] : DB_NAME;
+    }
+
+    public static void createTablesIfNotExists(String... tableName) {
+        String actualTableName = getTableName(tableName);
+        String createTableSQL = String.format("""
+            CREATE TABLE IF NOT EXISTS %s (
                 id SERIAL PRIMARY KEY,
                 detection_time TIMESTAMP,
                 timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 video_filename VARCHAR(255),
-                total_frames_processed INTEGER NOT NULL,
                 first_motion_frame INTEGER,
                 last_motion_frame INTEGER,
-                first_motion_x NUMERIC(8,2),
                 has_motion BOOLEAN NOT NULL,
                 direction VARCHAR(20),
                 first_motion_time NUMERIC(8,2),
                 last_motion_time NUMERIC(8,2),
-                motion_duration_frames INTEGER,
-                motion_duration_seconds NUMERIC(8,2),
                 speed_mph NUMERIC(6,2)
             )
-            """;
+            """, actualTableName);
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(createTableSQL);
-            System.out.println("motion_results table created or already exists");
+            System.out.println(actualTableName + " table created or already exists");
         } catch (SQLException e) {
             System.err.println("Error creating table: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
-    public static void insertMotionResult(MotionResult result, String videoFilename) {
-        String insertSQL = """
-            INSERT INTO motion_results (
-                detection_time, video_filename, total_frames_processed, first_motion_frame, 
-                last_motion_frame, first_motion_x, has_motion,
-                direction, first_motion_time, last_motion_time, motion_duration_frames,
-                motion_duration_seconds, speed_mph
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
+    public static void insertMotionResult(MotionResult result, String videoFilename, String... tableName) {
+        String actualTableName = getTableName(tableName);
+        String insertSQL = String.format("""
+            INSERT INTO %s (
+                detection_time, video_filename, first_motion_frame, 
+                last_motion_frame, has_motion,
+                direction, first_motion_time, last_motion_time, speed_mph
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, actualTableName);
         
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
-            
-            if (result.detectionTime() != null) {
-                pstmt.setTimestamp(1, Timestamp.from(result.detectionTime().toInstant()));
-            } else {
-                pstmt.setNull(1, Types.TIMESTAMP);
-            }
+            pstmt.setTimestamp(1, Timestamp.from(result.detectionTime().toInstant()));
             pstmt.setString(2, videoFilename);
-            pstmt.setInt(3, result.totalFramesProcessed());
-            pstmt.setInt(4, result.firstMotionFrame());
-            pstmt.setInt(5, result.lastMotionFrame());
-            pstmt.setDouble(6, result.firstMotionX());
-            pstmt.setBoolean(7, result.hasMotion());
-            pstmt.setString(8, result.getDirection().toString());
-            pstmt.setDouble(9, result.getFirstMotionTime());
-            pstmt.setDouble(10, result.getLastMotionTime());
-            pstmt.setInt(11, result.getMotionDurationFrames());
-            pstmt.setDouble(12, result.getMotionDurationSeconds());
-            pstmt.setDouble(13, result.getSpeedMph());
+            pstmt.setInt(3, result.firstMotionFrame());
+            pstmt.setInt(4, result.lastMotionFrame());
+            pstmt.setBoolean(5, result.hasMotion());
+            pstmt.setString(6, result.getDirection().toString());
+            pstmt.setDouble(7, result.getFirstMotionTime());
+            pstmt.setDouble(8, result.getLastMotionTime());
+            pstmt.setDouble(9, result.getSpeedMph());
             
             int rowsAffected = pstmt.executeUpdate();
-            System.out.println("Motion result saved to database (" + rowsAffected + " row inserted)");
+            System.out.println("Motion result saved to " + actualTableName + " (" + rowsAffected + " row inserted)");
             
         } catch (SQLException e) {
             System.err.println("Error inserting motion result: " + e.getMessage());

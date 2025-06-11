@@ -34,27 +34,23 @@ public record MotionResult(
         return hasMotion() ? lastMotionFrame / video.fps() : -1;
     }
     
-    public int getMotionDurationFrames() {
-        return hasMotion() ? lastMotionFrame - firstMotionFrame : 0;
-    }
-    
-    public double getMotionDurationSeconds() {
-        return hasMotion() ? getMotionDurationFrames() / video.fps() : 0;
-    }
-    
-    public double getSpeedFeetPerSecond() {
-        if (!hasMotion() || getMotionDurationSeconds() == 0) {
+    public double getSpeedMph() {
+        if (!hasMotion()) {
             return 0;
         }
+        int motionDurationFrames = lastMotionFrame - firstMotionFrame;
+        if (motionDurationFrames <= 0) {
+            return 0;
+        }
+        
         double distance = getDirection() == Direction.LeftToRight
             ? FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT 
             : FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT;
-        return distance / getMotionDurationSeconds();
-    }
-    
-    public double getSpeedMph() {
+            
+        double speedFeetPerSecond = (distance * video.fps()) / motionDurationFrames;
+        
         var fps_to_mph = 0.681818;
-        return getSpeedFeetPerSecond() * fps_to_mph;
+        return speedFeetPerSecond * fps_to_mph;
     }
 
     public void printMotionResults() {
@@ -69,8 +65,8 @@ public record MotionResult(
                 getFirstMotionTime(),
                 lastMotionFrame,
                 getLastMotionTime(),
-                getMotionDurationFrames(),
-                getMotionDurationSeconds(),
+                lastMotionFrame - firstMotionFrame,
+                (double) (lastMotionFrame - firstMotionFrame) / video.fps(),
                 getDirection().toString(),
                 getSpeedMph()
             ) : isRejected ? "  Video rejected due to noise" : "  No significant motion detected";

@@ -15,22 +15,17 @@
     </properties>
 
     <dependencies>
-
         <!-- Custom built OpenCV module for MacOS ARM64 -->
         <dependency>
             <groupId>org.opencv</groupId>
             <artifactId>opencv</artifactId>
             <version>4.12.0-custom</version>
         </dependency>
-
-        <!-- PostgreSQL JDBC Driver for Supabase connection -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
         </dependency>
-
-        <!-- JUnit 5 for testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -49,7 +44,6 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
