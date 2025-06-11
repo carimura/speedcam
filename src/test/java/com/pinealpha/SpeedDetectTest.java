@@ -26,14 +26,14 @@ public class SpeedDetectTest {
 
     // Expected results: video filename -> {firstFrame, lastFrame, direction}
     private static final Map<String, Object[]> EXPECTED_RESULTS = Map.ofEntries(
-            Map.entry("left-to-right-1", new Object[]{61, 178, Direction.LeftToRight}),
-            Map.entry("left-to-right-2", new Object[]{72, 233, Direction.LeftToRight}),
-            Map.entry("left-to-right-3", new Object[]{74, 196, Direction.LeftToRight}),
-            Map.entry("left-to-right-4", new Object[]{44, 162, Direction.LeftToRight}),
-            Map.entry("right-to-left-1", new Object[]{89, 279, Direction.RightToLeft}),
-            Map.entry("right-to-left-2", new Object[]{133, 249, Direction.RightToLeft}),
-            Map.entry("right-to-left-3", new Object[]{165, 351, Direction.RightToLeft}),
-            Map.entry("right-to-left-4", new Object[]{66, 220, Direction.RightToLeft})
+            Map.entry("Road Cam 6-7-2025, 2.05.46pm", new Object[]{61, 178, Direction.LeftToRight}),
+            Map.entry("Road Cam 6-7-2025, 2.09.59pm", new Object[]{72, 233, Direction.LeftToRight}),
+            Map.entry("Road Cam 6-9-2025, 1.01.52pm", new Object[]{74, 196, Direction.LeftToRight}),
+            Map.entry("Road Cam 6-9-2025, 9.57.54am", new Object[]{44, 162, Direction.LeftToRight}),
+            Map.entry("Road Cam 6-7-2025, 2.39.30pm", new Object[]{89, 279, Direction.RightToLeft}),
+            Map.entry("Road Cam 6-9-2025, 7.55.13am", new Object[]{133, 249, Direction.RightToLeft}),
+            Map.entry("Road Cam 6-9-2025, 1.08.44pm", new Object[]{165, 351, Direction.RightToLeft}),
+            Map.entry("Road Cam 6-9-2025, 10.43.09am", new Object[]{66, 220, Direction.RightToLeft})
     );
 
     @BeforeAll
@@ -72,17 +72,13 @@ public class SpeedDetectTest {
         actualResult.printMotionResults();
         System.out.println("--- Test Complete: " + videoIdentifier + " ---");
 
-        // A rejected video is OK, we won't call that a fail just a "SKIP"
         if (actualResult.isRejected()) {
             System.out.println("Skipping test for rejected video: " + videoIdentifier);
             return;
         }
 
-        // Assert that the direction is correct
-        assertEquals(expectedDirection, actualResult.getDirection(),
-                "Incorrect direction for " + videoIdentifier);
+        assertEquals(expectedDirection, actualResult.getDirection(), "Incorrect direction for " + videoIdentifier);
 
-        // Assert that the first and last frames are within the tolerance
         assertTrue(Math.abs(expectedFirstFrame - actualResult.firstMotionFrame()) <= FRAME_TOLERANCE,
                 String.format("First frame for %s is out of tolerance. Expected: %d, Actual: %d",
                         videoIdentifier, expectedFirstFrame, actualResult.firstMotionFrame()));

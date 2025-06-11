@@ -1,7 +1,11 @@
 package com.pinealpha.model;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 public record MotionResult(
     VideoInfo video,
+    ZonedDateTime detectionTime,
     int totalFramesProcessed,
     int firstMotionFrame,
     int lastMotionFrame,
@@ -74,14 +78,18 @@ public record MotionResult(
         double fieldOfViewDistance = hasMotion() && getDirection() == Direction.LeftToRight
             ? FIELD_OF_VIEW_FEET_LEFT_TO_RIGHT 
             : FIELD_OF_VIEW_FEET_RIGHT_TO_LEFT;
+            
+        String detectionTimeStr = detectionTime != null ? detectionTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss a")) : "N/A";
 
         String results = """
             
             Motion Detection Results:
+              Detection time: %s
               Total Frames: %d
               Distance: %.0f feet
             %s
             """.formatted(
+                detectionTimeStr,
                 totalFramesProcessed,
                 fieldOfViewDistance,
                 motionDetails

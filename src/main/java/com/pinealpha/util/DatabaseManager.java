@@ -27,6 +27,7 @@ public class DatabaseManager {
         String createTableSQL = """
             CREATE TABLE IF NOT EXISTS motion_results (
                 id SERIAL PRIMARY KEY,
+                detection_time TIMESTAMP,
                 timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 video_filename VARCHAR(255),
                 total_frames_processed INTEGER NOT NULL,
@@ -56,28 +57,33 @@ public class DatabaseManager {
     public static void insertMotionResult(MotionResult result, String videoFilename) {
         String insertSQL = """
             INSERT INTO motion_results (
-                video_filename, total_frames_processed, first_motion_frame, 
+                detection_time, video_filename, total_frames_processed, first_motion_frame, 
                 last_motion_frame, first_motion_x, has_motion,
                 direction, first_motion_time, last_motion_time, motion_duration_frames,
                 motion_duration_seconds, speed_mph
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
         
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
             
-            pstmt.setString(1, videoFilename);
-            pstmt.setInt(2, result.totalFramesProcessed());
-            pstmt.setInt(3, result.firstMotionFrame());
-            pstmt.setInt(4, result.lastMotionFrame());
-            pstmt.setDouble(5, result.firstMotionX());
-            pstmt.setBoolean(6, result.hasMotion());
-            pstmt.setString(7, result.getDirection().toString());
-            pstmt.setDouble(8, result.getFirstMotionTime());
-            pstmt.setDouble(9, result.getLastMotionTime());
-            pstmt.setInt(10, result.getMotionDurationFrames());
-            pstmt.setDouble(11, result.getMotionDurationSeconds());
-            pstmt.setDouble(12, result.getSpeedMph());
+            if (result.detectionTime() != null) {
+                pstmt.setTimestamp(1, Timestamp.from(result.detectionTime().toInstant()));
+            } else {
+                pstmt.setNull(1, Types.TIMESTAMP);
+            }
+            pstmt.setString(2, videoFilename);
+            pstmt.setInt(3, result.totalFramesProcessed());
+            pstmt.setInt(4, result.firstMotionFrame());
+            pstmt.setInt(5, result.lastMotionFrame());
+            pstmt.setDouble(6, result.firstMotionX());
+            pstmt.setBoolean(7, result.hasMotion());
+            pstmt.setString(8, result.getDirection().toString());
+            pstmt.setDouble(9, result.getFirstMotionTime());
+            pstmt.setDouble(10, result.getLastMotionTime());
+            pstmt.setInt(11, result.getMotionDurationFrames());
+            pstmt.setDouble(12, result.getMotionDurationSeconds());
+            pstmt.setDouble(13, result.getSpeedMph());
             
             int rowsAffected = pstmt.executeUpdate();
             System.out.println("Motion result saved to database (" + rowsAffected + " row inserted)");

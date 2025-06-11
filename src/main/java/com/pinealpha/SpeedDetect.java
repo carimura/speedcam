@@ -5,6 +5,9 @@ import com.pinealpha.util.Helper;
 import com.pinealpha.util.DatabaseManager;
 
 import java.io.*;
+import java.nio.file.Paths;
+import java.time.ZonedDateTime;
+
 import java.util.*;
 
 import org.opencv.core.Mat;
@@ -49,6 +52,9 @@ public class SpeedDetect {
 
     public static MotionResult getCarSpeedFromVideo(String videoPath, boolean debug) throws IOException {
         VideoCapture cap = new VideoCapture(videoPath);
+
+        String fileName = Paths.get(videoPath).getFileName().toString();
+        ZonedDateTime detectionTime = Helper.parseDateTimeFromFilename(fileName);
 
         VideoInfo video = new VideoInfo(
                 cap.get(Videoio.CAP_PROP_FPS),
@@ -247,7 +253,7 @@ public class SpeedDetect {
                 if (earlyMotionRatio > NOISE_THRESHOLD) {
                     System.out.println(String.format("Video rejected due to excessive noise: %.1f%% of early frames had motion (threshold: %.1f%%)", 
                         earlyMotionRatio * 100, NOISE_THRESHOLD * 100));
-                    return new MotionResult(video, frameCount, -1, -1, -1, true);
+                    return new MotionResult(video, detectionTime, frameCount, -1, -1, -1, true);
                 }
                 if (debug) {
                     System.out.println(String.format("Early motion check passed: %.1f%% of frames had motion", earlyMotionRatio * 100));
@@ -275,6 +281,7 @@ public class SpeedDetect {
 
         return new MotionResult(
                 video,
+                detectionTime,
                 frameCount,
                 firstMotionFrame,
                 lastMotionFrame,

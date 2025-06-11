@@ -20,23 +20,23 @@ Road Cam 6-4-2025, 1.10.33pm PDT - 6-4-2025, 1.10.33pm PDT.mp4
 
 
 ## Target Motion Results
-- left-to-right-1 --> motion frame range should be 61-178
-- left-to-right-2 --> motion frame range should be 72-233
-- left-to-right-3 --> motion frame range should be 74-196
-- left-to-right-4 --> motion frame range should be 44-162
-- right-to-left-1 --> motion frame range should be 89-279
-- right-to-left-2 --> motion frame range should be 133-249
-- right-to-left-3 --> motion frame range should be 165-351
-- right-to-left-4 --> motion frame range should be 66-220
+- Road Cam 6-7-2025, 2.05.46pm --> motion frame range should be 61-178 left-to-right
+- Road Cam 6-7-2025, 2.09.59pm --> motion frame range should be 72-233 left-to-right
+- Road Cam 6-9-2025, 1.01.52pm --> motion frame range should be 74-196 left-to-right
+- Road Cam 6-9-2025, 9.57.54am --> motion frame range should be 44-162 left-to-right
+- Road Cam 6-7-2025, 2.39.30pm --> motion frame range should be 89-279 right-to-left
+- Road Cam 6-9-2025, 7.55.13am --> motion frame range should be 133-249 right-to-left
+- Road Cam 6-9-2025, 1.08.44pm --> motion frame range should be 165-351 right-to-left
+- Road Cam 6-9-2025, 10.43.09am --> motion frame range should be 66-220 right-to-left
 
 
 ## Testing
 
 All videos
-`mvn test`
+`mvn clean test`
 
 Single video
-`mvn test -Dvideo.test.filter=right-to-left-2`
+`mvn clean test -Dvideo.test.filter=right-to-left-2`
 
 
 

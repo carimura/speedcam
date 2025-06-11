@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Arrays;
-import java.util.stream.Collectors;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
@@ -182,5 +184,17 @@ public class Helper {
         }
         
         return videoPaths;
+    }
+
+    public static ZonedDateTime parseDateTimeFromFilename(String fileName) {
+        var str = fileName.replace("Road Cam ", "");
+        str = str.split(" - ")[0];
+        str = str.replace("PDT", "");
+        str = str.replace("am", "AM");
+        str = str.replace("pm", "PM").trim();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M-d-uuuu, h.m.sa");
+        LocalDateTime localDateTime = LocalDateTime.parse(str, formatter);
+        return localDateTime.atZone(java.time.ZoneId.of("America/Los_Angeles"));
     }
 }
