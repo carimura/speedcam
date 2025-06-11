@@ -3,7 +3,6 @@
 Exploration of automated speed detection in modern Java, starting with the OpenCV JNI bindings and then switching to the FFM API.
 
 ## TODO
-- add the time of the car itself into MotionResult which can be determined from the filename
 - see if there's any simple refactorings of SpeedDetect.java, getting a little long in the tooth
 - Front end CRUD site
 - Convert to FFM API (calc performance differences)
