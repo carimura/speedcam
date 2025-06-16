@@ -3,7 +3,8 @@
 Exploration of automated speed detection in modern Java, starting with the OpenCV JNI bindings and then switching to the FFM API.
 
 ## TODO
-- see if there's any simple refactorings of SpeedDetect.java, getting a little long in the tooth
+- currently performance is an issue... it'll take over 3 hours to process a days worth of videos. Need to speed this up by a lot. Parallelize? GPUs? Panama conversion to FFM API?
+- Currently thinking offload to a Function compute service to parallelize across cloud compute. 
 - Front end CRUD site
 - Convert to FFM API (calc performance differences)
 
