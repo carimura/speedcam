@@ -190,8 +190,6 @@ public class SpeedDetect {
                                     motionThreshold = Config.LeftToRight.MOTION_THRESHOLD;
                                     areaThreshold = Config.LeftToRight.AREA_THRESHOLD;
                                     consecutiveFramesRequired = Config.LeftToRight.CONSECUTIVE_FRAMES_REQUIRED;
-                                    endMotionThreshold = Config.LeftToRight.END_MOTION_THRESHOLD;
-                                    noMotionFramesBeforeStop = Config.LeftToRight.NO_MOTION_FRAMES_BEFORE_STOP;
                                 } else {
                                     // Right-to-left: car gets very small as it moves away
                                     motionThreshold = Config.RightToLeft.MOTION_THRESHOLD;

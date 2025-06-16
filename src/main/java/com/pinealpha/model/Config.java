@@ -44,21 +44,19 @@ public class Config {
     public static final int DEFAULT_CONSECUTIVE_FRAMES_REQUIRED = 20;
     public static final double DEFAULT_END_MOTION_THRESHOLD = 0.005;
     public static final int DEFAULT_NO_MOTION_FRAMES_BEFORE_STOP = 10;
-    
+
     // Direction-specific parameters based on memory
     public static class LeftToRight {
         public static final int CONSECUTIVE_FRAMES_REQUIRED = 8;
-        public static final double MOTION_THRESHOLD = 0.007;
-        public static final double AREA_THRESHOLD = 1500;
-        public static final double END_MOTION_THRESHOLD = 0.005;
-        public static final int NO_MOTION_FRAMES_BEFORE_STOP = 10;
+        public static final double MOTION_THRESHOLD = 0.006;
+        public static final double AREA_THRESHOLD = 1200;
     }
     
     public static class RightToLeft {
         public static final int CONSECUTIVE_FRAMES_REQUIRED = 8;
-        public static final double MOTION_THRESHOLD = 0.005;
-        public static final double AREA_THRESHOLD = 1000;
-        public static final double END_MOTION_THRESHOLD = 0.003;
-        public static final int NO_MOTION_FRAMES_BEFORE_STOP = 12;
+        public static final double MOTION_THRESHOLD = 0.004;
+        public static final double AREA_THRESHOLD = 800;
+        public static final double END_MOTION_THRESHOLD = 0.002;
+        public static final int NO_MOTION_FRAMES_BEFORE_STOP = 25;
     }
 } 
