@@ -62,15 +62,8 @@ public class SpeedDetect {
                 (int) cap.get(Videoio.CAP_PROP_FRAME_HEIGHT),
                 (int) cap.get(Videoio.CAP_PROP_FRAME_COUNT)
         );
-        Helper.printVideoProperties(video);
 
-        // bottom left, bottom right, top right, top left
-        List<Point> roadPoints = Arrays.asList(
-                new Point(0, 1060),
-                new Point(video.frameWidth(), 1935),
-                new Point(video.frameWidth(), 800),
-                new Point(0, 860)
-        );
+        List<Point> roadPoints = Config.getRoadPoints(video.frameWidth());
 
         MatOfPoint roadPolygon = new MatOfPoint();
         roadPolygon.fromList(roadPoints);
@@ -80,13 +73,13 @@ public class SpeedDetect {
 
         // Create background subtractor for motion detection
         var bgSubtractor = Video.createBackgroundSubtractorMOG2();
-        bgSubtractor.setDetectShadows(true);
-        bgSubtractor.setHistory(10);
-        bgSubtractor.setVarThreshold(16); // Lower threshold = more sensitive (default is 16)
+        bgSubtractor.setDetectShadows(Config.BG_DETECT_SHADOWS);
+        bgSubtractor.setHistory(Config.BG_HISTORY);
+        bgSubtractor.setVarThreshold(Config.BG_VAR_THRESHOLD); // Lower threshold = more sensitive (default is 16)
 
         Mat frame = new Mat();
         Mat fgMask = new Mat();
-        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2));
+        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(Config.KERNEL_SIZE, Config.KERNEL_SIZE));
 
         int frameCount = 0;
         int firstMotionFrame = -1;
@@ -104,16 +97,16 @@ public class SpeedDetect {
         boolean isLeftToRight;
 
         // Direction-specific parameters
-        double motionThreshold = 0.01;
-        double areaThreshold = 2000;
-        int consecutiveFramesRequired = 20;
-        double endMotionThreshold = 0.005; // For detecting when motion ends
-        int noMotionFramesBeforeStop = 10; // Consecutive frames with no motion to stop tracking
+        double motionThreshold = Config.DEFAULT_MOTION_THRESHOLD;
+        double areaThreshold = Config.DEFAULT_AREA_THRESHOLD;
+        int consecutiveFramesRequired = Config.DEFAULT_CONSECUTIVE_FRAMES_REQUIRED;
+        double endMotionThreshold = Config.DEFAULT_END_MOTION_THRESHOLD; // For detecting when motion ends
+        int noMotionFramesBeforeStop = Config.DEFAULT_NO_MOTION_FRAMES_BEFORE_STOP; // Consecutive frames with no motion to stop tracking
 
         // Noise detection variables
         int earlyMotionFrames = 0;
-        final int EARLY_FRAME_CUTOFF = 80;
-        final double NOISE_THRESHOLD = 0.55; // 55% motion in early frames = too noisy
+        final int EARLY_FRAME_CUTOFF = Config.EARLY_FRAME_CUTOFF;
+        final double NOISE_THRESHOLD = Config.NOISE_THRESHOLD; // 55% motion in early frames = too noisy
 
         while (cap.read(frame)) {
             if (frame.empty()) {
@@ -157,7 +150,7 @@ public class SpeedDetect {
                     .orElse(0);
 
             double motionPercentage = (totalMotionArea * 100.0) / (video.frameWidth() * video.frameHeight());
-            boolean hasMotion = frameCount > 5 && motionPercentage > motionThreshold && largestContourArea > areaThreshold;
+            boolean hasMotion = frameCount > Config.INITIAL_FRAME_SKIP && motionPercentage > motionThreshold && largestContourArea > areaThreshold;
 
             if (hasMotion) {
                 if (frameCount < EARLY_FRAME_CUTOFF) {
@@ -194,15 +187,18 @@ public class SpeedDetect {
                                 System.out.println("Detected direction: " + (isLeftToRight ? "Left-to-Right" : "Right-to-Left"));
 
                                 if (isLeftToRight) {
-                                    motionThreshold = 0.006;
-                                    areaThreshold = 1200;
-                                    consecutiveFramesRequired = 8; // Even lower for earlier detection
+                                    motionThreshold = Config.LeftToRight.MOTION_THRESHOLD;
+                                    areaThreshold = Config.LeftToRight.AREA_THRESHOLD;
+                                    consecutiveFramesRequired = Config.LeftToRight.CONSECUTIVE_FRAMES_REQUIRED;
+                                    endMotionThreshold = Config.LeftToRight.END_MOTION_THRESHOLD;
+                                    noMotionFramesBeforeStop = Config.LeftToRight.NO_MOTION_FRAMES_BEFORE_STOP;
                                 } else {
                                     // Right-to-left: car gets very small as it moves away
-                                    motionThreshold = 0.004;
-                                    areaThreshold = 800; // Lower to catch small distant cars
-                                    endMotionThreshold = 0.002; // Even lower threshold for tiny distant cars
-                                    noMotionFramesBeforeStop = 25; // Much more tolerance for intermittent detection
+                                    motionThreshold = Config.RightToLeft.MOTION_THRESHOLD;
+                                    areaThreshold = Config.RightToLeft.AREA_THRESHOLD;
+                                    consecutiveFramesRequired = Config.RightToLeft.CONSECUTIVE_FRAMES_REQUIRED;
+                                    endMotionThreshold = Config.RightToLeft.END_MOTION_THRESHOLD;
+                                    noMotionFramesBeforeStop = Config.RightToLeft.NO_MOTION_FRAMES_BEFORE_STOP;
                                 }
                             }
                         }
@@ -240,7 +236,7 @@ public class SpeedDetect {
                         + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d, sustained=%s",
                                 motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames, sustainedMotion));
             } else {
-                if (frameCount % 25 == 0) {
+                if (frameCount % Config.FRAME_PROGRESS_INTERVAL == 0) {
                     System.out.println("Frame " + frameCount
                             + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d",
                                     motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames));
