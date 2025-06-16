@@ -71,14 +71,14 @@ public class SpeedDetectTest {
 
         assertTrue(videoPath != null, "No video file found for identifier: " + videoIdentifier);
 
-        System.out.println("\n--------- TESTING: " + videoIdentifier + " ---------");
+        System.out.println("\n\n------------------ TESTING: " + videoIdentifier + " ------------------");
         MotionResult actualResult = SpeedDetect.getCarSpeedFromVideo(videoPath, DEBUG);
         actualResult.printMotionResults();
 
         DatabaseManager.insertMotionResult(actualResult, videoPath, TEST_TABLE_NAME);
         verifyDatabaseInsertion(actualResult, videoPath);
 
-        System.out.println("--------- TEST COMPLETE: " + videoIdentifier + " ---------");
+        System.out.println("--------------------------- TEST COMPLETE: ---------------------------");
 
         if (actualResult.isRejected()) {
             System.out.println("Skipping assertions for rejected video: " + videoIdentifier);

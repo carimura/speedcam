@@ -10,9 +10,11 @@ Exploration of automated speed detection in modern Java, starting with the OpenC
 
 ## Building
 `mvn clean -Pcomplete package`
+`mvn clean -Pcomplete package -Dmaven.test.skip`
 
 ## Running
 `java --enable-preview -cp ./target/speedcam-0.1-jar-with-dependencies.jar com.pinealpha.SpeedDetect --in src/main/resources/sample_videos/`
+`java --enable-preview -cp ./target/speedcam-0.1-jar-with-dependencies.jar com.pinealpha.SpeedDetect --in 'src/main/resources/sample_videos/Road Cam 6-7-2025, 2.05.46pm PDT - 6-7-2025, 2.05.46pm PDT.mp4'`
 
 ## Filename format
 Road Cam 6-4-2025, 1.10.33pm PDT - 6-4-2025, 1.10.33pm PDT.mp4

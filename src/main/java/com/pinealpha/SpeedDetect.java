@@ -156,7 +156,7 @@ public class SpeedDetect {
                 if (frameCount < EARLY_FRAME_CUTOFF) {
                     earlyMotionFrames++;
                 }
-                
+
                 consecutiveMotionFrames++;
                 consecutiveNoMotionFrames = 0;
                 if (consecutiveMotionFrames >= consecutiveFramesRequired && !sustainedMotion && !carHasPassed) {
@@ -223,13 +223,6 @@ public class SpeedDetect {
                 if (hasMotion || sustainedMotion) {
                     Imgcodecs.imwrite("target/mask_" + frameCount + ".jpg", maskedFgMask);
                 }
-            }
-
-            if (sustainedMotion && hasMotion) {
-                lastMotionFrame = frameCount;
-            }
-
-            if (debug) {
                 System.out.println("Frame " + frameCount
                         + String.format(": motion=%.4f%%, largest=%.0f, contours=%d, hasMotion=%s, consecutive=%d, sustained=%s",
                                 motionPercentage, largestContourArea, significantContours, hasMotion, consecutiveMotionFrames, sustainedMotion));
@@ -241,19 +234,23 @@ public class SpeedDetect {
                 }
             }
 
+            if (sustainedMotion && hasMotion) {
+                lastMotionFrame = frameCount;
+            }
+
             // Check for excessive noise after early frames
             if (frameCount == EARLY_FRAME_CUTOFF) {
                 double earlyMotionRatio = (double) earlyMotionFrames / EARLY_FRAME_CUTOFF;
                 if (earlyMotionRatio > NOISE_THRESHOLD) {
-                    System.out.println(String.format("Video rejected due to excessive noise: %.1f%% of early frames had motion (threshold: %.1f%%)", 
-                        earlyMotionRatio * 100, NOISE_THRESHOLD * 100));
+                    System.out.println(String.format("Video rejected due to excessive noise: %.1f%% of early frames had motion (threshold: %.1f%%)",
+                            earlyMotionRatio * 100, NOISE_THRESHOLD * 100));
                     return new MotionResult(video, detectionTime, frameCount, -1, -1, -1, true);
                 }
                 if (debug) {
                     System.out.println(String.format("Early motion check passed: %.1f%% of frames had motion", earlyMotionRatio * 100));
                 }
             }
-            
+
             frameCount++;
 
             maskedFgMask.release();
