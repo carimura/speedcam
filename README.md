@@ -40,6 +40,11 @@ All videos
 Single video
 `mvn clean test -Dvideo.test.filter=right-to-left-2`
 
+## Performance
+Running all tests:
+- Total time to run all tests: 1m 26s
+- Average time per video (just the video): 8.7 seconds
+
 
 
 ## Testing instructions for LLM
