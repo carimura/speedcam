@@ -72,7 +72,11 @@ public class SpeedDetectTest {
         assertTrue(videoPath != null, "No video file found for identifier: " + videoIdentifier);
 
         System.out.println("\n\n------------------ TESTING: " + videoIdentifier + " ------------------");
+        long startTime = System.currentTimeMillis();
         MotionResult actualResult = SpeedDetect.getCarSpeedFromVideo(videoPath, DEBUG);
+        long endTime = System.currentTimeMillis();
+        long duration = endTime - startTime;
+        System.out.println("Video processing took " + duration + "ms");
         actualResult.printMotionResults();
 
         DatabaseManager.insertMotionResult(actualResult, videoPath, TEST_TABLE_NAME);
@@ -84,6 +88,8 @@ public class SpeedDetectTest {
             System.out.println("Skipping assertions for rejected video: " + videoIdentifier);
             return;
         }
+
+        assertTrue(duration < 15000, "Video processing took too long: " + duration + "ms");
 
         assertEquals(expectedDirection, actualResult.getDirection(), "Incorrect direction for " + videoIdentifier);
 
