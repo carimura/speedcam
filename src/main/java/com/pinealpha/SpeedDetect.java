@@ -3,6 +3,7 @@ package com.pinealpha;
 import com.pinealpha.model.*;
 import com.pinealpha.util.Helper;
 import com.pinealpha.util.DatabaseManager;
+import com.pinealpha.util.Timer;
 
 import java.io.*;
 import java.nio.file.Paths;
@@ -51,6 +52,8 @@ public class SpeedDetect {
     }
 
     public static MotionResult getCarSpeedFromVideo(String videoPath, boolean debug) throws IOException {
+        Timer videoTimer = new Timer();
+        videoTimer.reset();
         VideoCapture cap = new VideoCapture(videoPath);
 
         String fileName = Paths.get(videoPath).getFileName().toString();
@@ -75,7 +78,7 @@ public class SpeedDetect {
         var bgSubtractor = Video.createBackgroundSubtractorMOG2();
         bgSubtractor.setDetectShadows(Config.BG_DETECT_SHADOWS);
         bgSubtractor.setHistory(Config.BG_HISTORY);
-        bgSubtractor.setVarThreshold(Config.BG_VAR_THRESHOLD); // Lower threshold = more sensitive (default is 16)
+        bgSubtractor.setVarThreshold(Config.BG_VAR_THRESHOLD);
 
         Mat frame = new Mat();
         Mat fgMask = new Mat();
@@ -100,40 +103,49 @@ public class SpeedDetect {
         double motionThreshold = Config.DEFAULT_MOTION_THRESHOLD;
         double areaThreshold = Config.DEFAULT_AREA_THRESHOLD;
         int consecutiveFramesRequired = Config.DEFAULT_CONSECUTIVE_FRAMES_REQUIRED;
-        double endMotionThreshold = Config.DEFAULT_END_MOTION_THRESHOLD; // For detecting when motion ends
-        int noMotionFramesBeforeStop = Config.DEFAULT_NO_MOTION_FRAMES_BEFORE_STOP; // Consecutive frames with no motion to stop tracking
+        double endMotionThreshold = Config.DEFAULT_END_MOTION_THRESHOLD;
+        int noMotionFramesBeforeStop = Config.DEFAULT_NO_MOTION_FRAMES_BEFORE_STOP;
 
         // Noise detection variables
         int earlyMotionFrames = 0;
         final int EARLY_FRAME_CUTOFF = Config.EARLY_FRAME_CUTOFF;
-        final double NOISE_THRESHOLD = Config.NOISE_THRESHOLD; // 55% motion in early frames = too noisy
+        final double NOISE_THRESHOLD = Config.NOISE_THRESHOLD;
 
-        while (cap.read(frame)) {
-            if (frame.empty()) {
+        while (true) {
+            videoTimer.start("Frame Reading");
+            boolean frameRead = cap.read(frame);
+            videoTimer.stop("Frame Reading");
+            if (!frameRead || frame.empty()) {
                 break;
             }
 
-            // Apply background subtraction to full frame
+            videoTimer.start("Background Subtraction");
             bgSubtractor.apply(frame, fgMask);
+            videoTimer.stop("Background Subtraction");
 
             // Apply ROI mask to motion mask
             Mat maskedFgMask = new Mat();
+            videoTimer.start("Image Filtering");
             org.opencv.core.Core.bitwise_and(fgMask, roiMask, maskedFgMask);
 
             // Remove noise with morphological operations
             // Use MORPH_CLOSE to connect nearby regions
             Imgproc.morphologyEx(maskedFgMask, maskedFgMask, Imgproc.MORPH_CLOSE, kernel);
+            videoTimer.stop("Image Filtering");
 
             // Find contours of moving objects in masked area
             List<MatOfPoint> contours = new ArrayList<>();
             Mat hierarchy = new Mat();
+            videoTimer.start("Contour Detection");
             Imgproc.findContours(maskedFgMask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            videoTimer.stop("Contour Detection");
 
             // Filter contours by size (look for car-sized objects)
             int significantContours = 0;
             double totalMotionArea = 0;
             List<MatOfPoint> largeContours = new ArrayList<>();
 
+            videoTimer.start("Contour Processing");
             for (MatOfPoint contour : contours) {
                 double area = Imgproc.contourArea(contour);
 
@@ -143,6 +155,7 @@ public class SpeedDetect {
                     largeContours.add(contour);
                 }
             }
+            videoTimer.stop("Contour Processing");
 
             double largestContourArea = largeContours.stream()
                     .mapToDouble(c -> Imgproc.contourArea(c))
@@ -269,6 +282,8 @@ public class SpeedDetect {
         roiMask.release();
         roadPolygon.release();
         cap.release();
+
+        videoTimer.print();
 
         return new MotionResult(
                 video,
